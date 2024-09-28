@@ -1,0 +1,1 @@
+{"statusCode":500,"body":"{\"message\":\"Failed to process room scan.\",\"error\":\"Missing required key 'Key' in params\"}"}
