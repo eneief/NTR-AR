@@ -1,40 +1,59 @@
-//
-//  ContentView.swift
-//  NTR-AR
-//
-//  Created by Nafees-ul Haque on 9/28/24.
-//
-
 import SwiftUI
-import RealityKit
 
-struct ContentView : View {
+struct ContentView: View {
+	 @State private var resultMessage: String = "Press the button to test network call"
+	 @State private var isLoading: Bool = false
 
-    var body: some View {
-        RealityView { content in
+	 var body: some View {
+		  VStack(spacing: 20) {
+				Text(resultMessage)
+					 .multilineTextAlignment(.center)
+					 .padding()
 
-            // Create a cube model
-            let model = Entity()
-            let mesh = MeshResource.generateBox(size: 0.1, cornerRadius: 0.005)
-            let material = SimpleMaterial(color: .gray, roughness: 0.15, isMetallic: true)
-            model.components.set(ModelComponent(mesh: mesh, materials: [material]))
-            model.position = [0, 0.05, 0]
+				if isLoading {
+					 ProgressView()
+						  .progressViewStyle(CircularProgressViewStyle())
+				}
 
-            // Create horizontal plane anchor for the content
-            let anchor = AnchorEntity(.plane(.horizontal, classification: .any, minimumBounds: SIMD2<Float>(0.2, 0.2)))
-            anchor.addChild(model)
+				Button(action: {
+					 testNetworkCall()
+				}) {
+					 Text("Test Network Call")
+						  .padding()
+						  .background(Color.blue)
+						  .foregroundColor(.white)
+						  .cornerRadius(10)
+				}
+		  }
+		  .padding()
+	 }
 
-            // Add the horizontal plane anchor to the scene
-            content.add(anchor)
+	 // The function must be defined within the struct scope, not inside the body
+	 func testNetworkCall() {
+		  isLoading = true
+		  resultMessage = "Sending request..."
 
-            content.camera = .spatialTracking
+		  // Replace with your actual bucket name and object key
+		  let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
+		  let objectKey = "example.txt"
 
-        }
-        .edgesIgnoringSafeArea(.all)
-    }
-
+		  // Call the networking manager function
+		  NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: objectKey) { result in
+				DispatchQueue.main.async {
+					 isLoading = false
+					 switch result {
+					 case .success(let response):
+						  resultMessage = "Success: \(response)"
+					 case .failure(let error):
+						  resultMessage = "Error: \(error.localizedDescription)"
+					 }
+				}
+		  }
+	 }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+	 static var previews: some View {
+		  ContentView()
+	 }
 }
