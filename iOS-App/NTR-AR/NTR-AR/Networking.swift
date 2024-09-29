@@ -41,7 +41,7 @@ class NetworkingManager {
 	 private init() {}
 	 
 	 // POST request to process room scan
-	 func processRoomScan(bucketName: String, objectKey: String, completion: @escaping (Result<String, NetworkingError>) -> Void) {
+	 func processRoomScan(bucketName: String, objectKey: String, completion: @escaping (Result<Data, NetworkingError>) -> Void) {
 		  // Construct the full URL using the base URL and endpoint
 		  guard let url = URL(string: APIConstants.baseURL + APIConstants.scanEndpoint) else {
 				completion(.failure(.invalidURL))
@@ -79,15 +79,9 @@ class NetworkingManager {
 					 completion(.failure(.invalidResponse))
 					 return
 				}
-		  
-				// Parse the response data to a string format
-				guard let data = data, let responseString = String(data: data, encoding: .utf8) else {
-					 completion(.failure(.decodingError))
-					 return
-				}
 				
 				// Return the successful response
-				completion(.success(responseString))
+              completion(.success(data!))
 		  }.resume() // Ensure the task resumes immediately
 	 }
 }

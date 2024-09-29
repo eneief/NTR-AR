@@ -24,10 +24,6 @@ struct RealityKitView: UIViewRepresentable {
         coachingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(coachingOverlay)
         
-        #if DEBUG
-        view.debugOptions = [.showFeaturePoints, .showAnchorOrigins, .showAnchorGeometry]
-        #endif
-        
         context.coordinator.view = view
         session.delegate = context.coordinator
         
@@ -69,10 +65,32 @@ struct RealityKitView: UIViewRepresentable {
             let anchor = AnchorEntity(plane: .horizontal)
             view.scene.addAnchor(anchor)
             
-            // Load and scale the furniture model
+//             Load and scale the furniture model
+            guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    print("Could not find documents directory")
+                    return
+                }
+
+//                 Create a file URL directly in the documents direc"tory
+            let url = documentsDirectory.appendingPathComponent(furnitureName+".usdz")
+            
+                    
+            do {
+                    let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                    if let fileSize = attributes[FileAttributeKey.size] as? NSNumber {
+                        print("File size: \(fileSize.intValue) bytes")
+                    } else {
+                        print("Could not retrieve file size.")
+                    }
+                } catch {
+                    print("Error retrieving file attributes: \(error.localizedDescription)")
+                }
+
+
             if let modelEntity = try? ModelEntity.loadModel(named: furnitureName) {
                 modelEntity.scale = SIMD3<Float>(Float(entityScaling[0]), Float(entityScaling[1]), Float(entityScaling[2]))
                 anchor.addChild(modelEntity)
+                print("Successfully loaded: \(furnitureName)")
             } else {
                 print("Error: Unable to load model for \(furnitureName)")
             }
@@ -87,61 +105,78 @@ struct RealityKitView: UIViewRepresentable {
 }
 
 struct ContentView: View {
-	 
-	 @State private var furnitureName = ""
-	 @State private var entityScaling = [0.0,0.0,0.0]
-	 @State private var scaleValue: Float = 1.0
-	 
-	var body: some View {
-			  VStack {
-					
-					// RealityKitView to display AR content
-					RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
-						 .ignoresSafeArea()
-					
-					Spacer()
-					
-					// Scale slider for adjusting the size of the furniture
-					VStack {
-						 Text("Adjust Scale: \(scaleValue, specifier: "%.2f")x")
-							  .font(.subheadline)
-						 Slider(value: $scaleValue, in: 0.5...2.0)
-							  .padding()
-					}
-					.background(Color(.systemGray6))
-					.cornerRadius(10)
-					.padding([.leading, .trailing, .bottom])
-					
-					// Furniture picker and place button in a horizontal stack
-					HStack {
-						 
-						 // Furniture Picker
-						 Picker(selection: $furnitureName, label: Text("Pick Furniture")) {
-							  Text("Bed").tag("Bed")
-							  Text("Dresser").tag("Dresser")
-							  Text("Desk").tag("Computer_Desk")
-						 }
-						 .pickerStyle(MenuPickerStyle()) // Use a menu picker style for better visual appearance
-						 .padding(.leading)
-						 
-						 Spacer()
-						 
-						 // Place button
-						 Button("Place") {
-							  if !furnitureName.isEmpty {
-									entityScaling = [Double(scaleValue), Double(scaleValue), Double(scaleValue)]
-							  }
-						 }
-						 .padding()
-						 .background(Color.blue)
-						 .foregroundColor(.white)
-						 .cornerRadius(10)
-						 .padding(.trailing)
-					}
-					.background(Color(.systemGray6))
-					.cornerRadius(10)
-					.padding([.leading, .trailing, .bottom])
-			  }
-			  .background(Color(.systemGray6)) // Background color to make the UI cleaner
-		 }
-	}
+    
+    @State private var furnitureName = ""
+    @State private var entityScaling = [0.0,0.0,0.0]
+    
+    @State private var isLoading: Bool = true
+    
+    init(){
+        
+        let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
+        let objectKey = ["Asylum_Bed.usdz", "Computer_Desk.usdz", "Dresser.usdz"]
+        
+        for file in objectKey {
+            // Call the networking manager function
+            NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: file) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let response):
+                        
+                        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                            print("Could not find documents directory")
+                            return
+                        }
+
+                        // Create a file URL directly in the documents directory
+                        let fileURL = documentsDirectory.appendingPathComponent(file)
+
+                        do {
+                            // Write the data to the file
+                            try response.write(to: fileURL, options: .atomic) // Use .atomic to ensure file integrity
+                            print("File saved successfully: \(file)")
+                        } catch {
+                            print("Error saving file: \(error.localizedDescription)")
+                        }
+                        
+                    case .failure(let error):
+                        print("Error: \(error)")
+                    }
+                }
+            }
+        }
+    }
+    
+    var body: some View {
+        VStack {
+            if furnitureName.isEmpty {
+                Text("No furniture selected.")
+            } else {
+                Text("Furniture Selected: \(furnitureName)")
+            }
+            
+            RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
+                .ignoresSafeArea()
+            
+            HStack {
+                Button("Add Bed") {
+                    furnitureName = "Asylum_Bed"
+                    entityScaling = [0.003, 0.003, 0.003]
+                }
+                .padding()
+                
+                Button("Add Dresser") {
+                    furnitureName = "Dresser"
+                    entityScaling = [0.008, 0.008, 0.008]
+                }
+                .padding()
+                
+                Button("Add Desk") {
+                    furnitureName = "Computer_Desk"
+                    entityScaling = [0.006, 0.006, 0.006]
+                }
+                .padding()
+            }
+        }
+    }
+}
