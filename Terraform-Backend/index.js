@@ -5,8 +5,9 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 
 exports.handler = async (event) => {
+  console.log()
   console.log("Received event:", JSON.stringify(event, null, 2)); // Log the incoming event
-
+  event = JSON.parse(event.body)
   try {
     // Extract bucket name from event or fallback to environment variable
     const bucketName = event.bucketName || process.env.BUCKET_NAME;
@@ -15,12 +16,24 @@ exports.handler = async (event) => {
     // Validate required parameters
     if (!bucketName) {
       console.error("Error: Missing bucket name.");
-      throw new Error("Bucket name is missing.");
+      // throw new Error("Bucket name is missing.");
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          message: "Missing bucket name" + JSON.stringify(event),
+        }),
+      };
     }
 
     if (!objectKey) {
       console.error("Error: Missing object key.");
-      throw new Error("Object key is missing in the event data.");
+      // throw new Error("Object key is missing in the event data.");
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          message: "Missing object key" + JSON.stringify(event),
+        }),
+      };
     }
 
     // Fetch the object from S3
