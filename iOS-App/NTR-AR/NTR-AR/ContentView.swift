@@ -107,76 +107,59 @@ struct RealityKitView: UIViewRepresentable {
 struct ContentView: View {
     
     @State private var furnitureName = ""
-    @State private var entityScaling = [0.0,0.0,0.0]
-    
-    @State private var isLoading: Bool = true
-    
-    init(){
-        
-        let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
-        let objectKey = ["Asylum_Bed.usdz", "Computer_Desk.usdz", "Dresser.usdz"]
-        
-        for file in objectKey {
-            // Call the networking manager function
-            NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: file) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let response):
-                        
-                        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                            print("Could not find documents directory")
-                            return
-                        }
-
-                        // Create a file URL directly in the documents directory
-                        let fileURL = documentsDirectory.appendingPathComponent(file)
-
-                        do {
-                            // Write the data to the file
-                            try response.write(to: fileURL, options: .atomic) // Use .atomic to ensure file integrity
-                            print("File saved successfully: \(file)")
-                        } catch {
-                            print("Error saving file: \(error.localizedDescription)")
-                        }
-                        
-                    case .failure(let error):
-                        print("Error: \(error)")
-                    }
-                }
-            }
-        }
-    }
-    
+     @State private var entityScaling = [0.0,0.0,0.0]
+     @State private var scaleValue: Float = 1.0
+     
     var body: some View {
-        VStack {
-            if furnitureName.isEmpty {
-                Text("No furniture selected.")
-            } else {
-                Text("Furniture Selected: \(furnitureName)")
-            }
-            
-            RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
-                .ignoresSafeArea()
-            
-            HStack {
-                Button("Add Bed") {
-                    furnitureName = "Asylum_Bed"
-                    entityScaling = [0.003, 0.003, 0.003]
-                }
-                .padding()
-                
-                Button("Add Dresser") {
-                    furnitureName = "Dresser"
-                    entityScaling = [0.008, 0.008, 0.008]
-                }
-                .padding()
-                
-                Button("Add Desk") {
-                    furnitureName = "Computer_Desk"
-                    entityScaling = [0.006, 0.006, 0.006]
-                }
-                .padding()
-            }
-        }
+              VStack {
+                    
+                    // RealityKitView to display AR content
+                    RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
+                         .ignoresSafeArea()
+                    
+                    Spacer()
+                    
+                    // Scale slider for adjusting the size of the furniture
+                    VStack {
+                         Text("Adjust Scale: \(scaleValue, specifier: "%.2f")x")
+                              .font(.subheadline)
+                         Slider(value: $scaleValue, in: 0.5...2.0)
+                              .padding()
+                    }
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding([.leading, .trailing, .bottom])
+                    
+                    // Furniture picker and place button in a horizontal stack
+                    HStack {
+                         
+                         // Furniture Picker
+                         Picker(selection: $furnitureName, label: Text("Pick Furniture")) {
+                              Text("Bed").tag("Bed")
+                              Text("Dresser").tag("Dresser")
+                              Text("Desk").tag("Computer_Desk")
+                         }
+                         .pickerStyle(MenuPickerStyle()) // Use a menu picker style for better visual appearance
+                         .padding(.leading)
+                         
+                         Spacer()
+                         
+                         // Place button
+                         Button("Place") {
+                              if !furnitureName.isEmpty {
+                                    entityScaling = [Double(scaleValue), Double(scaleValue), Double(scaleValue)]
+                              }
+                         }
+                         .padding()
+                         .background(Color.blue)
+                         .foregroundColor(.white)
+                         .cornerRadius(10)
+                         .padding(.trailing)
+                    }
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding([.leading, .trailing, .bottom])
+              }
+              .background(Color(.systemGray6)) // Background color to make the UI cleaner
+         }
     }
-}
