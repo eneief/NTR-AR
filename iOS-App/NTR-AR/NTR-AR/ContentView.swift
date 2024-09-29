@@ -79,8 +79,9 @@ struct RealityKitView: UIViewRepresentable {
     }
 }
 
-struct ContentView : View {
-
+struct ContentView: View {
+	 @State private var resultMessage: String = "Press the button to test network call"
+	 @State private var isLoading: Bool = false
     var body: some View {
         VStack(){
             RealityKitView()
@@ -115,7 +116,4 @@ struct ContentView : View {
         }
         
     }
-}
-#Preview {
-    ContentView()
 }
