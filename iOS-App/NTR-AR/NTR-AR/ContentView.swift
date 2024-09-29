@@ -105,78 +105,97 @@ struct RealityKitView: UIViewRepresentable {
 }
 
 struct ContentView: View {
-    
-    @State private var furnitureName = ""
-    @State private var entityScaling = [0.0,0.0,0.0]
-    
-    @State private var isLoading: Bool = true
-    
-    init(){
-        
-        let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
-        let objectKey = ["Asylum_Bed.usdz", "Computer_Desk.usdz", "Dresser.usdz"]
-        
-        for file in objectKey {
-            // Call the networking manager function
-            NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: file) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let response):
-                        
-                        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                            print("Could not find documents directory")
-                            return
-                        }
+	 
+	 @State private var furnitureName = ""
+	 @State private var entityScaling = [0.0, 0.0, 0.0]
+	 @State private var scaleValue: Float = 1.0
+	 
+	 var body: some View {
+		  ZStack {
+				GrainyGradientView()
+					 .ignoresSafeArea()
+				
+				VStack {
+					 
+					 RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)
+						  .ignoresSafeArea()
+					 
+					 Spacer()
+					 
+					 HStack {
+						  // Furniture Picker segmented
+						  Picker(selection: $furnitureName, label: Text("Select Furniture")) {
+								Text("Bed").tag("Bed")
+								Text("Dresser").tag("Dresser")
+								Text("Desk").tag("Computer_Desk")
+						  }
+						  .pickerStyle(.segmented)
+						  .padding()
+						  
+						  // Place button
+						  Button("Place") {
+								if !furnitureName.isEmpty {
+									 entityScaling = [Double(scaleValue), Double(scaleValue), Double(scaleValue)]
+								}
+						  }
+						  .padding()
+						  .background(Color.blue)
+						  .foregroundColor(.white)
+						  .cornerRadius(10)
+						  .padding(.trailing)
+					 }
+					 .background(Color.white.opacity(0.9))
+					 .cornerRadius(20)
+					 .shadow(radius: 5)
+					 .padding([.leading, .trailing, .bottom], 10)
+				}
+		  }
+	 }
+}
 
-                        // Create a file URL directly in the documents directory
-                        let fileURL = documentsDirectory.appendingPathComponent(file)
 
-                        do {
-                            // Write the data to the file
-                            try response.write(to: fileURL, options: .atomic) // Use .atomic to ensure file integrity
-                            print("File saved successfully: \(file)")
-                        } catch {
-                            print("Error saving file: \(error.localizedDescription)")
-                        }
-                        
-                    case .failure(let error):
-                        print("Error: \(error)")
-                    }
-                }
-            }
-        }
-    }
-    
-    var body: some View {
-        VStack {
-            if furnitureName.isEmpty {
-                Text("No furniture selected.")
-            } else {
-                Text("Furniture Selected: \(furnitureName)")
-            }
-            
-            RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
-                .ignoresSafeArea()
-            
-            HStack {
-                Button("Add Bed") {
-                    furnitureName = "Asylum_Bed"
-                    entityScaling = [0.003, 0.003, 0.003]
-                }
-                .padding()
-                
-                Button("Add Dresser") {
-                    furnitureName = "Dresser"
-                    entityScaling = [0.008, 0.008, 0.008]
-                }
-                .padding()
-                
-                Button("Add Desk") {
-                    furnitureName = "Computer_Desk"
-                    entityScaling = [0.006, 0.006, 0.006]
-                }
-                .padding()
-            }
-        }
-    }
+struct GrainyGradientView: View {
+	 var body: some View {
+		  GeometryReader { geometry in
+				ZStack {
+					 AngularGradient(gradient: Gradient(colors: [.indigo, .purple, .blue, .indigo]), center: .center)
+					 
+					 Color.black.opacity(0.1)
+						  .blendMode(.overlay)
+					 
+					 NoiseView()
+						  .opacity(0.05)
+						  .blendMode(.overlay)
+				}
+		  }
+	 }
+}
+
+struct NoiseView: View {
+	 @State private var noiseImage: UIImage?
+	 
+	 var body: some View {
+		  Image(uiImage: noiseImage ?? UIImage())
+				.resizable()
+				.onAppear {
+					 self.noiseImage = generateNoiseImage()
+				}
+	 }
+	 
+	 func generateNoiseImage() -> UIImage {
+		  let size = CGSize(width: 300, height: 300)
+		  let renderer = UIGraphicsImageRenderer(size: size)
+		  
+		  let image = renderer.image { context in
+				for _ in 0..<Int(size.width * size.height) {
+					 let randomX = CGFloat.random(in: 0..<size.width)
+					 let randomY = CGFloat.random(in: 0..<size.height)
+					 let randomGray = CGFloat.random(in: 0...1)
+					 
+					 UIColor(white: randomGray, alpha: 1).setFill()
+					 context.fill(CGRect(x: randomX, y: randomY, width: 1, height: 1))
+				}
+		  }
+		  return image
+	 }
 }
