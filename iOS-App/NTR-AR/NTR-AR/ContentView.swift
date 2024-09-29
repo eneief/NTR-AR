@@ -5,7 +5,8 @@ import FocusEntity
 
 struct RealityKitView: UIViewRepresentable {
     
-    @Binding var furnitureName: String  // Bind the furniture name from ContentView
+    @Binding var furnitureName: String
+    @Binding var entityScaling: [Double]
 
     func makeUIView(context: Context) -> ARView {
         let view = ARView(frame: .zero)
@@ -41,7 +42,7 @@ struct RealityKitView: UIViewRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(furnitureName: $furnitureName)  // Pass the binding to the Coordinator
+        Coordinator(furnitureName: $furnitureName, entityScaling: $entityScaling)
     }
 
     func updateUIView(_ uiView: ARView, context: Context) {
@@ -51,11 +52,14 @@ struct RealityKitView: UIViewRepresentable {
     class Coordinator: NSObject, ARSessionDelegate {
         
         @Binding var furnitureName: String
+        @Binding var entityScaling: [Double]
+        
         weak var view: ARView?
         var focusEntity: FocusEntity?
         
-        init(furnitureName: Binding<String>) {
+        init(furnitureName: Binding<String>, entityScaling: Binding<[Double]>) {
             self._furnitureName = furnitureName
+            self._entityScaling = entityScaling
         }
         
         @objc func handleTap() {
@@ -67,7 +71,7 @@ struct RealityKitView: UIViewRepresentable {
             
             // Load and scale the furniture model
             if let modelEntity = try? ModelEntity.loadModel(named: furnitureName) {
-                modelEntity.scale = [0.0003, 0.0003, 0.0003]  // Adjust scaling
+                modelEntity.scale = SIMD3<Float>(Float(entityScaling[0]), Float(entityScaling[1]), Float(entityScaling[2]))
                 anchor.addChild(modelEntity)
             } else {
                 print("Error: Unable to load model for \(furnitureName)")
@@ -84,7 +88,8 @@ struct RealityKitView: UIViewRepresentable {
 
 struct ContentView: View {
     
-    @State private var furnitureName = ""  // Use @State for the furniture name
+    @State private var furnitureName = ""
+    @State private var entityScaling = [0.0,0.0,0.0]
     
     var body: some View {
         VStack {
@@ -95,22 +100,25 @@ struct ContentView: View {
                 Text("Furniture Selected: \(furnitureName)")
             }
             
-            RealityKitView(furnitureName: $furnitureName)  // Pass the state as a binding
+            RealityKitView(furnitureName: $furnitureName, entityScaling: $entityScaling)  // Pass the state as a binding
                 .ignoresSafeArea()
             
             HStack {
                 Button("Add Bed") {
                     furnitureName = "Bed"
+                    entityScaling = [0.003, 0.003, 0.003]
                 }
                 .padding()
                 
                 Button("Add Dresser") {
                     furnitureName = "Dresser"
+                    entityScaling = [0.008, 0.008, 0.008]
                 }
                 .padding()
                 
                 Button("Add Desk") {
                     furnitureName = "Computer_Desk"
+                    entityScaling = [0.008, 0.008, 0.008]
                 }
                 .padding()
             }
