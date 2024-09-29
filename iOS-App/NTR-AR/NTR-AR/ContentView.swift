@@ -24,10 +24,6 @@ struct RealityKitView: UIViewRepresentable {
         coachingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(coachingOverlay)
         
-        #if DEBUG
-        view.debugOptions = [.showFeaturePoints, .showAnchorOrigins, .showAnchorGeometry]
-        #endif
-        
         context.coordinator.view = view
         session.delegate = context.coordinator
         
@@ -69,10 +65,32 @@ struct RealityKitView: UIViewRepresentable {
             let anchor = AnchorEntity(plane: .horizontal)
             view.scene.addAnchor(anchor)
             
-            // Load and scale the furniture model
+//             Load and scale the furniture model
+            guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    print("Could not find documents directory")
+                    return
+                }
+
+//                 Create a file URL directly in the documents direc"tory
+            let url = documentsDirectory.appendingPathComponent(furnitureName+".usdz")
+            
+                    
+            do {
+                    let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                    if let fileSize = attributes[FileAttributeKey.size] as? NSNumber {
+                        print("File size: \(fileSize.intValue) bytes")
+                    } else {
+                        print("Could not retrieve file size.")
+                    }
+                } catch {
+                    print("Error retrieving file attributes: \(error.localizedDescription)")
+                }
+
+
             if let modelEntity = try? ModelEntity.loadModel(named: furnitureName) {
                 modelEntity.scale = SIMD3<Float>(Float(entityScaling[0]), Float(entityScaling[1]), Float(entityScaling[2]))
                 anchor.addChild(modelEntity)
+                print("Successfully loaded: \(furnitureName)")
             } else {
                 print("Error: Unable to load model for \(furnitureName)")
             }
@@ -94,6 +112,7 @@ struct ContentView: View {
     @State private var isLoading: Bool = true
     
     init(){
+        
         let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
         let objectKey = ["Asylum_Bed.usdz", "Computer_Desk.usdz", "Dresser.usdz"]
         
@@ -102,27 +121,26 @@ struct ContentView: View {
             NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: file) { result in
                 DispatchQueue.main.async {
                     switch result {
-                    case .success(var response):
-                        print("success obtain success")
+                    case .success(let response):
                         
                         guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                                print("Could not find documents directory")
-                                return
-                            }
+                            print("Could not find documents directory")
+                            return
+                        }
 
-                            // Create a file URL directly in the documents directory
-                            var fileURL = URL(fileURLWithPath: file, relativeTo: documentsDirectory).appendingPathExtension("usdz")
+                        // Create a file URL directly in the documents directory
+                        let fileURL = documentsDirectory.appendingPathComponent(file)
 
                         do {
-                                // Write the data to the file
-                            try response.write(to: fileURL) // Ensure to pass the correct parameters
-                                print("File saved successfully at \(fileURL)")
-                            } catch {
-                                print("Error saving file: \(error)")
-                            }
+                            // Write the data to the file
+                            try response.write(to: fileURL, options: .atomic) // Use .atomic to ensure file integrity
+                            print("File saved successfully: \(file)")
+                        } catch {
+                            print("Error saving file: \(error.localizedDescription)")
+                        }
                         
                     case .failure(let error):
-                        print("error")
+                        print("Error: \(error)")
                     }
                 }
             }

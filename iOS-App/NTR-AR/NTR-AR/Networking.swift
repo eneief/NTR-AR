@@ -79,12 +79,6 @@ class NetworkingManager {
 					 completion(.failure(.invalidResponse))
 					 return
 				}
-		  
-				// Parse the response data to a string format
-//				guard let data = data, let responseString = String(data: data, encoding: .utf8) else {
-//					 completion(.failure(.decodingError))
-//					 return
-//				}
 				
 				// Return the successful response
               completion(.success(data!))
