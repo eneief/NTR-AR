@@ -1,30 +1,28 @@
-//
-//  ContentView.swift
-//  NTR-AR
-//
-//  Created by Nafees-ul Haque on 9/28/24.
-//
-
 import ARKit
 import SwiftUI
 import RealityKit
 import FocusEntity
 
-var furnitureName = ""
-
-
 struct RealityKitView: UIViewRepresentable {
+    
+    @Binding var furnitureName: String  // Bind the furniture name from ContentView
+
     func makeUIView(context: Context) -> ARView {
-        let view = ARView()
+        let view = ARView(frame: .zero)
+        
+        // AR session configuration
         let session = view.session
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = [.horizontal]
         session.run(config)
+        
+        // AR coaching overlay
         let coachingOverlay = ARCoachingOverlayView()
-        coachingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         coachingOverlay.session = session
         coachingOverlay.goal = .horizontalPlane
+        coachingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(coachingOverlay)
+        
         #if DEBUG
         view.debugOptions = [.showFeaturePoints, .showAnchorOrigins, .showAnchorGeometry]
         #endif
@@ -32,88 +30,90 @@ struct RealityKitView: UIViewRepresentable {
         context.coordinator.view = view
         session.delegate = context.coordinator
         
-        view.addGestureRecognizer(
-            UITapGestureRecognizer(
-                target: context.coordinator,
-                action: #selector(Coordinator.handleTap)
-            )
+        // Tap gesture for placing furniture
+        let tapGesture = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleTap)
         )
+        view.addGestureRecognizer(tapGesture)
         
         return view
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(furnitureName: $furnitureName)  // Pass the binding to the Coordinator
+    }
+
+    func updateUIView(_ uiView: ARView, context: Context) {
+        // No update needed for now
     }
     
     class Coordinator: NSObject, ARSessionDelegate {
+        
+        @Binding var furnitureName: String
         weak var view: ARView?
         var focusEntity: FocusEntity?
         
+        init(furnitureName: Binding<String>) {
+            self._furnitureName = furnitureName
+        }
+        
         @objc func handleTap() {
-            if(furnitureName == ""){
-                return
+            guard let view = self.view, !furnitureName.isEmpty else { return }
+
+            // Create an anchor to attach the model to
+            let anchor = AnchorEntity(plane: .horizontal)
+            view.scene.addAnchor(anchor)
+            
+            // Load and scale the furniture model
+            if let modelEntity = try? ModelEntity.loadModel(named: furnitureName) {
+                modelEntity.scale = [0.0003, 0.0003, 0.0003]  // Adjust scaling
+                anchor.addChild(modelEntity)
+            } else {
+                print("Error: Unable to load model for \(furnitureName)")
             }
-            guard let view = self.view, let focusEntity = self.focusEntity else { return }
-
-            // Create a new anchor to add content to
-            let anchor = AnchorEntity()
-            view.scene.anchors.append(anchor)
-
-            // Add a Box entity with a blue material
-            let furniture = try! ModelEntity.loadModel(named: furnitureName)
-            furniture.scale = [0.0003, 0.0003, 0.0003]
-            furniture.position = furniture.position
-
-            anchor.addChild(furniture)
         }
 
         func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
+            // Focus entity initialization
             guard let view = self.view else { return }
-            debugPrint("Anchors added to the scene: ", anchors)
             self.focusEntity = FocusEntity(on: view, style: .classic(color: .yellow))
         }
-    }
-    
-    func updateUIView(_ view: ARView, context: Context) {
     }
 }
 
 struct ContentView: View {
-	 @State private var resultMessage: String = "Press the button to test network call"
-	 @State private var isLoading: Bool = false
+    
+    @State private var furnitureName = ""  // Use @State for the furniture name
+    
     var body: some View {
-        VStack(){
-            RealityKitView()
-                .ignoresSafeArea()
+        VStack {
             
-            HStack(){
-                Button(
-                    "Add Bed",
-                    action:{
-                        furnitureName = "Bed"
-                    }
-                
-                )
-                
-                Button(
-                    "Add Dresser",
-                    action:{
-                        furnitureName = "Dresser"
-                    }
-                
-                )
-                
-                Button(
-                    "Add Desk",
-                    action:{
-                        furnitureName = "Computer_Desk"
-                    }
-                
-                )
+            if furnitureName.isEmpty {
+                Text("No furniture selected.")
+            } else {
+                Text("Furniture Selected: \(furnitureName)")
             }
             
+            RealityKitView(furnitureName: $furnitureName)  // Pass the state as a binding
+                .ignoresSafeArea()
+            
+            HStack {
+                Button("Add Bed") {
+                    furnitureName = "Bed"
+                }
+                .padding()
+                
+                Button("Add Dresser") {
+                    furnitureName = "Dresser"
+                }
+                .padding()
+                
+                Button("Add Desk") {
+                    furnitureName = "Computer_Desk"
+                }
+                .padding()
+            }
         }
-        
     }
 }
