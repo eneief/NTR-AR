@@ -91,9 +91,46 @@ struct ContentView: View {
     @State private var furnitureName = ""
     @State private var entityScaling = [0.0,0.0,0.0]
     
+    @State private var isLoading: Bool = true
+    
+    init(){
+        let bucketName = "ntr-ar-room-scans-unique-vdg8fyp4"
+        let objectKey = ["Asylum_Bed.usdz", "Computer_Desk.usdz", "Dresser.usdz"]
+        
+        for file in objectKey {
+            // Call the networking manager function
+            NetworkingManager.shared.processRoomScan(bucketName: bucketName, objectKey: file) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(var response):
+                        print("success obtain success")
+                        
+                        guard let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                                print("Could not find documents directory")
+                                return
+                            }
+
+                            // Create a file URL directly in the documents directory
+                            var fileURL = URL(fileURLWithPath: file, relativeTo: documentsDirectory).appendingPathExtension("usdz")
+
+                        do {
+                                // Write the data to the file
+                            try response.write(to: fileURL) // Ensure to pass the correct parameters
+                                print("File saved successfully at \(fileURL)")
+                            } catch {
+                                print("Error saving file: \(error)")
+                            }
+                        
+                    case .failure(let error):
+                        print("error")
+                    }
+                }
+            }
+        }
+    }
+    
     var body: some View {
         VStack {
-            
             if furnitureName.isEmpty {
                 Text("No furniture selected.")
             } else {
@@ -105,7 +142,7 @@ struct ContentView: View {
             
             HStack {
                 Button("Add Bed") {
-                    furnitureName = "Bed"
+                    furnitureName = "Asylum_Bed"
                     entityScaling = [0.003, 0.003, 0.003]
                 }
                 .padding()
@@ -118,7 +155,7 @@ struct ContentView: View {
                 
                 Button("Add Desk") {
                     furnitureName = "Computer_Desk"
-                    entityScaling = [0.008, 0.008, 0.008]
+                    entityScaling = [0.006, 0.006, 0.006]
                 }
                 .padding()
             }
