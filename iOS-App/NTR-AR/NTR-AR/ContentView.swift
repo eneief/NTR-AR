@@ -86,9 +86,19 @@ struct RealityKitView: UIViewRepresentable {
                     print("Error retrieving file attributes: \(error.localizedDescription)")
                 }
 
+            var scale = [0.0,0.0,0.0]
+            if(furnitureName == "Asylum_Bed"){
+                scale = [0.003, 0.003, 0.003]
+            }
+            if(furnitureName == "Dresser"){
+                scale = [0.008, 0.008, 0.008]
+            }
+            if(furnitureName == "Computer_Desk"){
+                scale = [0.006, 0.006, 0.006]
+            }
 
             if let modelEntity = try? ModelEntity.loadModel(named: furnitureName) {
-                modelEntity.scale = SIMD3<Float>(Float(entityScaling[0]), Float(entityScaling[1]), Float(entityScaling[2]))
+                modelEntity.scale = SIMD3<Float>(Float(scale[0]), Float(scale[1]), Float(scale[2]))
                 anchor.addChild(modelEntity)
                 print("Successfully loaded: \(furnitureName)")
             } else {
@@ -108,7 +118,6 @@ struct ContentView: View {
 	 
 	 @State private var furnitureName = ""
 	 @State private var entityScaling = [0.0, 0.0, 0.0]
-	 @State private var scaleValue: Float = 1.0
 	 
 	 var body: some View {
 		  ZStack {
@@ -131,18 +140,6 @@ struct ContentView: View {
 						  }
 						  .pickerStyle(.segmented)
 						  .padding()
-						  
-						  // Place button
-						  Button("Place") {
-								if !furnitureName.isEmpty {
-									 entityScaling = [Double(scaleValue), Double(scaleValue), Double(scaleValue)]
-								}
-						  }
-						  .padding()
-						  .background(Color.blue)
-						  .foregroundColor(.white)
-						  .cornerRadius(10)
-						  .padding(.trailing)
 					 }
 					 .background(Color.white.opacity(0.9))
 					 .cornerRadius(20)
